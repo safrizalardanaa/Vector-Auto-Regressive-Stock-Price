@@ -10,6 +10,7 @@ Original file is located at
 """
 
 import os
+import pickle
 import random
 import warnings
 import numpy as np
@@ -142,7 +143,7 @@ best_lags    = 0
 target       = "close"
 
 # Search best feature with iteration
-for i in tqdm(range(1000), desc="Processing", unit="iteration"):
+for i in tqdm(range(2000), desc="Processing", unit="iteration"):
     try:
         # Choose random features
         selected_data = data.sample(n=random.randint(2, 2 + int(i/200)), axis=1, replace=False)
@@ -224,7 +225,7 @@ steps = len(data_test) + 100
 forecast       = model_fitted.forecast(data_train.values, steps = steps)
 forecast_index = pd.date_range(start=data_train.index[-1], freq='B', periods=steps + 1)[1:]
 forecast_data  = pd.DataFrame(forecast, index=forecast_index, columns=data_train.columns)
-forecast_data.head()
+forecast_data.tail()
 
 # Plot the results
 plt.figure(figsize=(12, 3))
@@ -267,3 +268,39 @@ test_MSE = mean_squared_error(data_test['close'], forecast_data[:-100]['close'])
 # Print the MSE for each feature
 print("Close Price MSE on Training Data:", train_MSE)
 print("Close Price MSE on Test Data:", test_MSE)
+
+"""## **Save the Model**"""
+
+# Menyimpan model VAR ke dalam file menggunakan pickle
+with open('model_var.pkl', 'wb') as f:
+    pickle.dump(model_fitted, f)
+
+# Untuk memuat kembali model dari file
+with open('model_var.pkl', 'rb') as f:
+    model_fitted = pickle.load(f)
+
+"""## **Forecast in the Future**"""
+
+# Number of predicted time steps
+steps = 250
+
+# Predict use VAR model
+forecast       = model_fitted.forecast(data_test.values, steps = steps)
+forecast_index = pd.date_range(start=data_test.index[-1], freq='B', periods=steps + 1)[1:]
+forecast_data  = pd.DataFrame(forecast, index=forecast_index, columns=data_test.columns)
+forecast_data.head()
+
+# Plot the results
+plt.figure(figsize=(12, 3))
+
+# Plot the training, test, and forecasted
+plt.plot(data_train.index    , data_train[target]   , label='Training Data', color='green')
+plt.plot(data_test.index     , data_test[target]    , label='Test Data'    , color='red')
+plt.plot(forecast_data.index , forecast_data[target], label='Test Forecast', color='blue', linestyle='--')
+
+plt.title('VAR Model Forecasting')
+plt.xlabel('Date')
+plt.ylabel(target)
+plt.legend()
+plt.grid(True)
+plt.show()
